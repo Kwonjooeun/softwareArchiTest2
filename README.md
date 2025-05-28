@@ -1,5 +1,8 @@
-무장통제 시스템 새로운 아키텍처
-1. 전체 구조
+# 무장통제 시스템 새로운 아키텍처
+
+## 1. 전체 구조
+
+```
 WeaponControlSystem
 ├── Core/                          # 핵심 비즈니스 로직
 │   ├── LaunchTube/               # 발사관 관리
@@ -19,9 +22,14 @@ WeaponControlSystem
     ├── Types/                    # 공통 타입 정의
     ├── Utils/                    # 유틸리티 함수
     └── Interfaces/               # 공통 인터페이스
-2. 핵심 클래스 설계
-2.1 LaunchTube (완전히 단순화)
-cpp// Core/LaunchTube/LaunchTube.h
+```
+
+## 2. 핵심 클래스 설계
+
+### 2.1 LaunchTube (완전히 단순화)
+
+```cpp
+// Core/LaunchTube/LaunchTube.h
 class LaunchTube {
 private:
     uint16_t m_tubeNumber;
@@ -52,8 +60,12 @@ public:
     
     void update();
 };
-2.2 무장 인터페이스 (더 명확한 분리)
-cpp// Core/Weapons/IWeapon.h
+```
+
+### 2.2 무장 인터페이스 (더 명확한 분리)
+
+```cpp
+// Core/Weapons/IWeapon.h
 class IWeapon {
 public:
     virtual ~IWeapon() = default;
@@ -106,8 +118,12 @@ public:
     bool isLaunched() const override { return m_launched.load(); }
     // ... 기타 구현
 };
-2.3 교전계획 관리자 (완전히 분리된 인터페이스)
-cpp// Core/EngagementManagers/IEngagementManager.h
+```
+
+### 2.3 교전계획 관리자 (완전히 분리된 인터페이스)
+
+```cpp
+// Core/EngagementManagers/IEngagementManager.h
 class IEngagementManager {
 public:
     virtual ~IEngagementManager() = default;
@@ -133,8 +149,12 @@ public:
     virtual Result<void> updateWaypoints(const std::vector<ST_WEAPON_WAYPOINT>& waypoints) = 0;
     virtual Result<AIEP_ALM_ASM_EP_RESULT> getMissileEngagementResult() const = 0;
 };
-2.4 서비스 계층
-cpp// Core/Services/WeaponControlService.h
+```
+
+### 2.4 서비스 계층
+
+```cpp
+// Core/Services/WeaponControlService.h
 class WeaponControlService {
 private:
     std::unique_ptr<ILaunchTubeManager> m_tubeManager;
@@ -164,8 +184,12 @@ public:
     virtual std::optional<TRKMGR_SYSTEMTARGET_INFO> getTarget(uint32_t systemTargetId) const = 0;
     virtual std::vector<uint32_t> getAllTargetIds() const = 0;
 };
-2.5 애플리케이션 컨트롤러
-cpp// Application/Controllers/WeaponController.h
+```
+
+### 2.5 애플리케이션 컨트롤러
+
+```cpp
+// Application/Controllers/WeaponController.h
 class WeaponController {
 private:
     std::unique_ptr<WeaponControlService> m_weaponService;
@@ -187,9 +211,13 @@ public:
     std::vector<LaunchTubeStatus> getAllTubeStatus() const;
     SystemStatistics getSystemStatistics() const;
 };
-3. 주요 개선사항
-3.1 의존성 주입
-cpp// main.cpp에서 의존성 구성
+```
+
+## 3. 주요 개선사항
+
+### 3.1 의존성 주입
+```cpp
+// main.cpp에서 의존성 구성
 auto config = SystemConfig::getInstance();
 auto commService = std::make_unique<DdsCommunicationService>();
 auto tubeManager = std::make_unique<LaunchTubeManager>(config.getMaxLaunchTubes());
@@ -205,8 +233,11 @@ auto taskManager = std::make_unique<PeriodicTaskManager>();
 auto controller = std::make_unique<WeaponController>(
     std::move(weaponService), std::move(messageHandler), 
     std::move(taskManager), std::move(commService));
-3.2 Result 타입으로 일관된 에러 처리
-cpptemplate<typename T>
+```
+
+### 3.2 Result 타입으로 일관된 에러 처리
+```cpp
+template<typename T>
 class Result {
 private:
     std::variant<T, ErrorInfo> m_data;
@@ -221,8 +252,11 @@ public:
     const T& value() const { return std::get<T>(m_data); }
     const ErrorInfo& error() const { return std::get<ErrorInfo>(m_data); }
 };
-3.3 설정 관리
-cpp// config/system.ini
+```
+
+### 3.3 설정 관리
+```cpp
+// config/system.ini
 [System]
 MaxLaunchTubes=6
 UpdateIntervalMs=100
@@ -236,10 +270,11 @@ ConfigPath=config
 [DDS]
 DomainId=83
 QosProfile=reliable
-이 구조의 장점:
+```
 
-명확한 책임 분리: 각 계층과 클래스가 명확한 역할
-테스트 용이성: 인터페이스 기반으로 Mock 객체 쉽게 생성
-확장성: 새로운 무장 종류 추가가 쉬움
-유지보수성: 변경 영향 범위가 제한적
-재사용성: 각 컴포넌트가 독립적으로 재사용 가능
+이 구조의 장점:
+- **명확한 책임 분리**: 각 계층과 클래스가 명확한 역할
+- **테스트 용이성**: 인터페이스 기반으로 Mock 객체 쉽게 생성
+- **확장성**: 새로운 무장 종류 추가가 쉬움
+- **유지보수성**: 변경 영향 범위가 제한적
+- **재사용성**: 각 컴포넌트가 독립적으로 재사용 가능
